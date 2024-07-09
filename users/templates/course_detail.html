@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Course Details</title>
+    <style>
+      /* Basic styling for readability */
+      html {
+        font-size: 62.5%;
+        font-family: "Montserrat", sans-serif;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-size: 1.6rem;
+        background-color: var(--bg);
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      /* Header and Navigation */
+      header {
+        background-color: var(--white);
+        padding: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+      }
+
+      nav a {
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.8rem 1.4rem; /* Adjusted padding */
+        border-radius: 8px; /* Rounded corners */
+        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #ec994b; /* Changed background color on hover */
+        color: #ffffff; /* Change text color on hover */
+      }
+
+      nav a:hover {
+        outline: 2px solid #ec994b; /* Initial transparent outline */
+        color: var(--primary);
+        background-color: white;
+      }
+      #logout {
+        background: none;
+        color: var(--primary);
+        font-weight: 600;
+        padding: 0.8rem 1.5rem; /* Adjusted padding */
+        border-radius: 20px; /* Rounded corners */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        border: 2px solid #ec994b;
+      }
+
+      #logout:hover {
+        padding: 1rem 1.7rem;
+        border: none;
+        background-color: #ec994b;
+        color: #ffffff;
+      }
+
+      .welcome-back {
+        flex-grow: 1; /* Allow this element to grow and center */
+        text-align: center;
+      }
+      .purchase-button {
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 1.25rem;
+        border: none;
+        cursor: pointer;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #ec994b;
+        color: #ffffff;
+      }
+      .purchase-button:hover {
+        outline: 2px solid #ec994b;
+        color: var(--primary);
+        background-color: white;
+      }
+      .payment-form {
+        display: none;
+        margin-top: 20px;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .payment-form h4 {
+        margin-bottom: 15px;
+      }
+      #card-element {
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #fff;
+      }
+      #card-errors {
+        color: red;
+        margin-top: 10px;
+      }
+      .payment-form button[type="submit"] {
+        text-decoration: none;
+        font-weight: 400;
+        font-size: 1.25rem;
+        border: none;
+        cursor: pointer;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #4caf50;
+        color: #ffffff;
+      }
+      .payment-form button[type="submit"]:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="{% url 'my_courses' %}" target="_self">My Courses</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/home/" target="_self">Home</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/Quizzes/" target="_self">Quizzes</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/home/" target="_self">Forums</a>
+        <div class="welcome-back" id="welcome-back">
+          Hey, welcome back,
+          <span style="font-weight: bold" id="username"></span>!
+        </div>
+        <button id="logout">Logout</button>
+      </nav>
+    </header>
+
+    <div class="container">
+      <h1>Course Details</h1>
+      <h2 id="course-title">Loading...</h2>
+      <p id="course-description">Loading...</p>
+      <h3>Lessons</h3>
+      <ul class="lesson-list" id="lesson-list">
+        <!-- Lessons will be dynamically added here -->
+      </ul>
+
+      <!-- Purchase Button -->
+      <button class="purchase-button" id="purchase-button">
+        Purchase Course
+      </button>
+
+      <!-- Payment Form -->
+      <form id="payment-form" class="payment-form">
+        <h4>Payment Details</h4>
+        <div id="card-element">
+          <!-- A Stripe Element will be inserted here. -->
+        </div>
+        <!-- Used to display form errors. -->
+        <div id="card-errors" role="alert"></div>
+        <button type="submit">Submit Payment</button>
+      </form>
+    </div>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const pathSegments = window.location.pathname.split("/");
+        const courseId = pathSegments[pathSegments.length - 2];
+
+        if (courseId) {
+          const query = `
+          query {
+        courseDetails(id: ${courseId}) {
+          id
+          title
+          description
+          totalLessons
+          lessonSet {
+            id
+            title
+          }
+        }
+      }
+        `;
+
+          fetch("/graphql/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `JWT ${localStorage.getItem("authToken")}`,
+            },
+            body: JSON.stringify({ query }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data.data);
+              const course = data.data.courseDetails;
+              document.getElementById("course-title").textContent =
+                course.title;
+              document.getElementById("course-description").textContent =
+                course.description;
+              const lessonList = document.getElementById("lesson-list");
+              lessonList.innerHTML = ""; // Clear existing list
+
+              course.lessonSet.forEach((lesson) => {
+                const li = document.createElement("li");
+                li.textContent = lesson.title;
+                lessonList.appendChild(li);
+              });
+            })
+            .catch((error) => {
+              console.error("Error fetching course details:", error);
+            });
+        } else {
+          console.error("No course ID provided in URL.");
+        }
+      });
+
+      const purchaseButton = document.getElementById("purchase-button");
+      const paymentForm = document.getElementById("payment-form");
+
+      purchaseButton.addEventListener("click", function () {
+        paymentForm.style.display = "block";
+      });
+
+      const stripe = Stripe(
+        "pk_test_51PZnoaIBIRQoeghBikTU4ipUW7N9f54dFeRhKCeXW908KRSRv0J3qemrM4802XONeFXhimoILe5VOfdSStq45H5p00eHgyR68e"
+      );
+      const elements = stripe.elements();
+      const cardElement = elements.create("card");
+      cardElement.mount("#card-element");
+
+      const form = document.getElementById("payment-form");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const { token, error } = await stripe.createToken(cardElement);
+
+        if (error) {
+          console.error(error);
+        } else {
+          const pathSegments = window.location.pathname.split("/");
+          const courseId = pathSegments[pathSegments.length - 2];
+          const amount = 10; // Replace with the actual amount
+
+          const response = await fetch("/graphql/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `JWT ${localStorage.getItem("authToken")}`,
+            },
+            body: JSON.stringify({
+              query: `
+              mutation {
+                createPayment(courseId: ${courseId}, token: "${token.id}", amount: ${amount}) {
+                  success
+                  message
+                }
+              }
+            `,
+            }),
+          });
+
+          const result = await response.json();
+          console.log(result);
+          if (result.data.createPayment.success) {
+            alert("Payment successful!");
+          } else {
+            if (
+              result.data.createPayment.message.includes("UNIQUE constraint")
+            ) {
+              alert("You have already paid for this course!");
+            } else {
+              alert("Payment failed: " + result.data.createPayment.message);
+            }
+          }
+        }
+      });
+
+      const token = localStorage.getItem("authToken");
+
+      if (token) {
+        try {
+          const decodedToken = jwt_decode(token);
+          const username = decodedToken.username;
+
+          document.getElementById("username").innerText = username;
+
+          const logoutButton = document.getElementById("logout");
+          logoutButton.addEventListener("click", () => {
+            localStorage.removeItem("authToken");
+            window.location.href = "/login/";
+          });
+        } catch (error) {
+          console.error("Error decoding token:", error);
+        }
+      } else {
+        window.location.href = "login.html"; // Replace with the correct login URL
+      }
+    </script>
+  </body>
+</html>

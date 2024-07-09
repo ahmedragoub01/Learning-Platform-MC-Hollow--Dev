@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create New Post</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      h1,
+      h2 {
+        text-align: center;
+        color: #333;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 30px;
+      }
+      label {
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      textarea {
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .message {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Create New Post</h1>
+      <form id="createPostForm">
+        <h2>New Post</h2>
+        <label for="postMessage">Post Message:</label>
+        <textarea id="postMessage" rows="4" required></textarea>
+
+        <button type="submit">Create Post</button>
+      </form>
+      <div id="message" class="message"></div>
+    </div>
+
+    <script>
+      async function createPost(topicId, message) {
+        const mutation = `
+                mutation CreatePost($topicId: Int!, $message: String!) {
+                    createPost(topicId: $topicId, message: $message) {
+                        success
+                        message
+                        post {
+                            id
+                            message
+                        }
+                    }
+                }
+            `;
+
+        try {
+          const response = await fetch(`/graphql`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "JWT " + localStorage.getItem("authToken"),
+            },
+            body: JSON.stringify({
+              query: mutation,
+              variables: { topicId, message },
+            }),
+          });
+
+          const result = await response.json();
+          return result.data.createPost;
+        } catch (error) {
+          console.error("Error creating post:", error);
+          return {
+            success: false,
+            message: "An error occurred while creating the post.",
+          };
+        }
+      }
+
+      document
+        .getElementById("createPostForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          // Extract topicId from URL
+          const topicId = parseInt(window.location.pathname.split("/")[2], 10);
+          const message = document.getElementById("postMessage").value;
+
+          const postResult = await createPost(topicId, message);
+
+          if (postResult.success) {
+            document.getElementById("message").textContent =
+              "Post created successfully.";
+            document.getElementById("message").className = "message success";
+            document.getElementById("postMessage").value = "";
+          } else {
+            document.getElementById("message").textContent =
+              "Error creating post: " + postResult.message;
+            document.getElementById("message").className = "message error";
+          }
+        });
+    </script>
+  </body>
+</html>

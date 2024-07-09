@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/swiper@8/swiper-bundle.min.css"
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
+
+      /* Global Reset */
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* Variables */
+      :root {
+        --primary: #ec994b; /* Changed primary color */
+        --white: #ffffff;
+        --bg: #f5f5f5;
+        --outline-color: #ec994b; /* Changed outline color */
+      }
+
+      /* Base Styles */
+      html {
+        font-size: 62.5%;
+        font-family: "Montserrat", sans-serif;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-size: 1.6rem;
+        background-color: var(--bg);
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      /* Header and Navigation */
+      header {
+        background-color: var(--white);
+        padding: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+      }
+
+      nav a {
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.8rem 1.4rem; /* Adjusted padding */
+        border-radius: 8px; /* Rounded corners */
+        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #ec994b; /* Changed background color on hover */
+        color: #ffffff; /* Change text color on hover */
+      }
+
+      nav a:hover {
+        outline: 2px solid #ec994b; /* Initial transparent outline */
+        color: var(--primary);
+        background-color: white;
+      }
+
+      #logout {
+        background: none;
+        color: var(--primary);
+        font-weight: 600;
+        padding: 0.8rem 1.5rem; /* Adjusted padding */
+        border-radius: 20px; /* Rounded corners */
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        border: 2px solid #ec994b;
+      }
+
+      #logout:hover {
+        padding: 1rem 1.7rem;
+        border: none;
+        background-color: var(--primary);
+        color: #ffffff;
+      }
+
+      .welcome-back {
+        flex-grow: 1; /* Allow this element to grow and center */
+        text-align: center;
+      }
+
+      /* Search Bar */
+      .search-container {
+        text-align: center;
+        margin-top: 2rem;
+      }
+
+      .search-bar {
+        width: 100%;
+        max-width: 400px;
+        padding: 1rem;
+        font-size: 1.6rem;
+        border: 2px solid var(--primary);
+        border-radius: 16px;
+        transition: border-color 0.3s ease;
+      }
+
+      .search-bar:focus {
+        outline: none;
+        border-color: #ec994b; /* Changed border color on focus */
+      }
+
+      /* Main Content */
+      .grid-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+        margin-top: 2rem;
+      }
+
+      .course-card {
+        background: var(--white);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        width: calc(100% + 6px);
+        position: relative; /* Ensure positioning context */
+        transition: transform 0.3s ease-in-out;
+      }
+
+      .course-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .course-card img {
+        width: 100%;
+        height: 180px; /* Adjust height as needed */
+        object-fit: cover;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+
+      .course-card-content {
+        padding: 1.5rem;
+        flex-grow: 1; /* Ensure content expands to fill space */
+      }
+
+      .course-title {
+        font-size: 1.6rem; /* Adjust font size */
+        margin-bottom: 1rem;
+      }
+
+      .course-description {
+        color: #666;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: pre-wrap; /* Preserve line breaks */
+        word-wrap: break-word; /* Allow long words to break */
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Limit to 3 lines */
+        -webkit-box-orient: vertical;
+        line-height: 1.6;
+        max-height: calc(1.6 * 3); /* Three lines of text at line-height 1.6 */
+      }
+
+      .see-more {
+        position: absolute;
+        bottom: 1.5rem; /* Adjust as needed */
+        left: 1.5rem; /* Adjust as needed */
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s ease;
+      }
+
+      .see-more:hover {
+        color: #d4812c;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="{% url 'my_courses' %}" target="_self">My Courses</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/home/" target="_self">Home</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/Quizzes/" target="_self">Quizzes</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/forums/" target="_self">Forums</a>
+        <div class="welcome-back">
+          Hey, welcome back,
+          <span style="font-weight: bold" id="username"></span>!
+        </div>
+        <button id="logout">Logout</button>
+      </nav>
+    </header>
+    <main class="container">
+      <div class="search-container">
+        <input
+          type="text"
+          id="searchInput"
+          class="search-bar"
+          placeholder="Search courses..."
+          oninput="filterCourses()"
+        />
+      </div>
+      <h1>Available Courses</h1>
+      <div class="grid-container" id="courses-container"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+    <script>
+      const token = localStorage.getItem("authToken");
+
+      if (token) {
+        try {
+          const decodedToken = jwt_decode(token);
+          const username = decodedToken.username;
+
+          document.getElementById("username").innerText = username;
+
+          const query = `
+        query {
+          allCourses {
+            id
+            title
+            description
+            imageUrl
+          }
+        }
+        `
+            .replace(/\s+/g, " ")
+            .trim();
+
+          fetch("/graphql/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `JWT ${token}`,
+            },
+            body: JSON.stringify({ query }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              const coursesContainer =
+                document.getElementById("courses-container");
+              if (data.errors) {
+                coursesContainer.innerHTML = `<p>Error fetching courses: ${data.errors[0].message}</p>`;
+              } else {
+                const courses = data.data.allCourses;
+                if (courses.length > 0) {
+                  courses.forEach((course) => {
+                    const courseCard = document.createElement("div");
+                    courseCard.className = "course-card";
+                    courseCard.innerHTML = `
+                    <img src="/static/${course.imageUrl}" alt="${course.title}">
+                    <div class="course-card-content">
+                      <h2 class="course-title">${course.title}</h2>
+                      <p class="course-description">${formatDescription(
+                        course.description
+                      )}</p><br>
+                      <a href="course/${
+                        course.id
+                      }/" class="see-more" target="_blank">See More</a>
+                    </div>
+                  `;
+                    coursesContainer.appendChild(courseCard);
+                  });
+                } else {
+                  coursesContainer.textContent = "No courses available.";
+                }
+              }
+            })
+            .catch((error) => {
+              coursesContainer.innerHTML = `<p>Error fetching courses.</p>`;
+            });
+
+          // Logout function
+          const logoutButton = document.getElementById("logout");
+          logoutButton.addEventListener("click", () => {
+            localStorage.removeItem("authToken");
+            window.location.href = "/login/";
+          });
+        } catch (error) {
+          console.error("Error decoding token:", error);
+          coursesContainer.innerHTML = `<p>Error decoding token.</p>`;
+        }
+      } else {
+        window.location.href = "login.html";
+      }
+
+      function formatDescription(description) {
+        const maxLength = 150; // Adjust maximum length
+        if (description.length > maxLength) {
+          return description.substring(0, maxLength) + "...";
+        }
+        return description;
+      }
+
+      function filterCourses() {
+        const searchText = document
+          .getElementById("searchInput")
+          .value.toLowerCase();
+        const courses = document.querySelectorAll(".course-card");
+
+        courses.forEach((course) => {
+          const title = course
+            .querySelector(".course-title")
+            .innerText.toLowerCase();
+          const description = course
+            .querySelector(".course-description")
+            .innerText.toLowerCase();
+
+          if (title.includes(searchText) || description.includes(searchText)) {
+            course.style.display = "block";
+          } else {
+            course.style.display = "none";
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

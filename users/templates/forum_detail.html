@@ -1,0 +1,14 @@
+{% extends 'base_generic.html' %} {% block content %}
+<h1>{{ forum.title }}</h1>
+<p>{{ forum.description }}</p>
+<br />
+<br />
+<a class="button-new" href="{% url 'new_topic' forum.id %}">New Topic</a>
+<br />
+<br />
+<ul>
+  {% for topic in topics %}
+  <li><a href="{% url 'topic_detail' topic.id %}">{{ topic.title }}</a></li>
+  {% endfor %}
+</ul>
+{% endblock %}

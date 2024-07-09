@@ -1,0 +1,18 @@
+{% extends 'base_generic.html' %} {% block content %}
+<h1>{{ topic.title }}</h1>
+<br />
+<br />
+<a class="button-new" href="{% url 'new_post' topic.id %}">New Post</a>
+<br />
+<br />
+<ul>
+  {% for post in posts %}
+  <li>
+    <p>{{ post.message }}</p>
+    <p>
+      Posted by {{ post.created_by.user.username }} on {{ post.created_at }}
+    </p>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

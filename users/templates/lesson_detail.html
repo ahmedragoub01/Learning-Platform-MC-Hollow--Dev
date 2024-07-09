@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Course Details</title>
+    <style>
+      html {
+        font-size: 62.5%;
+        font-family: "Montserrat", sans-serif;
+        scroll-behavior: smooth;
+      }
+      body {
+        font-size: 1.6rem;
+        background-color: var(--bg);
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      header {
+        background-color: var(--white);
+        padding: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+      }
+      nav a {
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.8rem 1.4rem;
+        border-radius: 8px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        background-color: #ec994b;
+        color: #ffffff;
+      }
+      nav a:hover {
+        outline: 2px solid #ec994b;
+        color: var(--primary);
+        background-color: white;
+      }
+      #logout {
+        background: none;
+        color: var(--primary);
+        font-weight: 600;
+        padding: 0.8rem 1.5rem;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        border: 2px solid #ec994b;
+      }
+      #logout:hover {
+        padding: 1rem 1.7rem;
+        border: none;
+        background-color: #ec994b;
+        color: #ffffff;
+      }
+      .welcome-back {
+        flex-grow: 1;
+        text-align: center;
+      }
+      .lesson-list li {
+        margin-bottom: 1rem;
+      }
+      .lesson-list a {
+        color: orange;
+        text-decoration: none;
+      }
+      .lesson-list a.completed {
+        color: orange;
+      }
+      .lesson-list a.disabled {
+        pointer-events: none;
+        color: lightgray;
+      }
+      .lesson-list a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="{% url 'my_courses' %}" target="_self">My Courses</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/home/" target="_self">Home</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/Quizzes/" target="_self">Quizzes</a>
+        &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+        <a href="/home/" target="_self">Forums</a>
+        <div class="welcome-back" id="welcome-back">
+          Hey, welcome back,
+          <span style="font-weight: bold" id="username"></span>!
+        </div>
+        <button id="logout">Logout</button>
+      </nav>
+    </header>
+
+    <div class="container">
+      <h1>Course Details</h1>
+      <h2 id="course-title">Loading...</h2>
+      <p id="course-description">Loading...</p>
+      <p id="course-progress">
+        Progress: <span id="progress-percentage">0%</span>
+      </p>
+      <p
+        id="certificate-message"
+        style="display: none; color: black; font-weight: 600"
+      >
+        You have to pass the quiz for this course to get your certificate. Click
+        <a
+          href="quizzes.html"
+          id="quiz-link"
+          style="color: #a435f0; text-decoration: none"
+          >here</a
+        >
+        to go to the quizzes page.
+      </p>
+
+      <h3>Lessons</h3>
+      <ul class="lesson-list" id="lesson-list">
+        <!-- Lessons will be dynamically added here -->
+      </ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const pathSegments = window.location.pathname.split("/");
+        const courseId = pathSegments[pathSegments.length - 2];
+        let studentId;
+
+        const token = localStorage.getItem("authToken");
+
+        if (token) {
+          try {
+            const decodedToken = jwt_decode(token);
+            const username = decodedToken.username;
+
+            document.getElementById("username").innerText = username;
+
+            const logoutButton = document.getElementById("logout");
+            logoutButton.addEventListener("click", () => {
+              localStorage.removeItem("authToken");
+              window.location.href = "/login/";
+            });
+
+            if (courseId) {
+              fetchStudentId(username, token)
+                .then((id) => {
+                  studentId = id;
+                  return fetchUserProgress(studentId, token);
+                })
+                .then((completedLessons) => {
+                  return fetchCourseDetails(courseId, token).then((course) => {
+                    return { completedLessons, course };
+                  });
+                })
+                .then(({ completedLessons, course }) => {
+                  console.log(completedLessons);
+                  return fetchLessons(courseId, token).then((allLessons) => {
+                    return { completedLessons, course, allLessons };
+                  });
+                })
+                .then(({ completedLessons, course, allLessons }) => {
+                  displayCourseDetails(course);
+                  displayLessons(
+                    allLessons,
+                    completedLessons,
+                    courseId,
+                    token,
+                    studentId
+                  );
+
+                  // Calculate and display progress percentage
+                  calculateProgressPercentage(courseId, studentId, token);
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                });
+            } else {
+              console.error("No course ID provided in URL.");
+            }
+          } catch (error) {
+            console.error("Error decoding token:", error);
+          }
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+
+      function fetchStudentId(username, token) {
+        const query = `
+              query {
+                  studentId(username: "${username}")
+              }
+          `;
+
+        return fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.errors) {
+              throw new Error(data.errors[0].message);
+            }
+            return data.data.studentId;
+          });
+      }
+
+      function fetchUserProgress(studentId, token) {
+        const query = `
+              query {
+                  userProgress(studentId: ${studentId}) {
+                      completedLessons {
+                          order
+                          title
+                      }
+                  }
+              }
+          `;
+
+        return fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            return data.data.userProgress;
+          });
+      }
+
+      function fetchCourseDetails(courseId, token) {
+        const query = `
+              query {
+                  courseDetails(id: ${courseId}) {
+                      id
+                      title
+                      description
+                      totalLessons
+                  }
+              }
+          `;
+
+        return fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            return data.data.courseDetails;
+          });
+      }
+
+      function fetchLessons(courseId, token) {
+        const query = `
+              query {
+                  courseLessons(courseId: ${courseId}) {
+                      id
+                      title
+                      order
+                  }
+              }
+          `;
+
+        return fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            return data.data.courseLessons || [];
+          });
+      }
+
+      function displayCourseDetails(course, completedLessons) {
+        document.getElementById("course-title").textContent = course.title;
+        document.getElementById("course-description").textContent =
+          course.description;
+      }
+
+      function displayLessons(
+        allLessons,
+        completedLessons,
+        courseId,
+        token,
+        studentId
+      ) {
+        const lessonList = document.getElementById("lesson-list");
+        lessonList.innerHTML = ""; // Clear previous lessons
+
+        const mergedLessons = allLessons.map((lesson) => {
+          const isCompleted = completedLessons[
+            courseId - parseInt(courseId / 2)
+          ].completedLessons.some(
+            (completed) => completed.title === lesson.title
+          );
+          console.log(isCompleted);
+          return {
+            ...lesson,
+            completed: isCompleted,
+          };
+        });
+
+        mergedLessons.sort((a, b) => a.order - b.order);
+
+        let lastCompletedOrder = 0;
+        console.log(mergedLessons);
+
+        // Determine the last completed lesson order
+        mergedLessons.forEach((lesson) => {
+          if (lesson.order === 1) {
+            lesson.completed = true;
+          }
+          if (lesson.completed) {
+            lastCompletedOrder = lesson.order;
+          }
+        });
+
+        // Apply styles and behaviors
+        mergedLessons.forEach((lesson, index) => {
+          console.log(lesson.completed);
+          const listItem = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = `lesson.html?lessonId=${lesson.id}`;
+          link.textContent = `${lesson.order}. ${lesson.title}`;
+
+          if (lesson.completed) {
+            link.classList.add("completed");
+            link.style.color = "orange";
+          } else if (lesson.order === lastCompletedOrder + 1) {
+            // Make the lesson immediately after the last completed lesson orange
+            link.style.color = "orange";
+            link.addEventListener("click", (event) => {
+              event.preventDefault();
+              updateProgress(courseId, lesson.id, studentId, token)
+                .then(() => {
+                  window.location.href = link.href;
+
+                  // Update the next lesson to be clickable
+                  if (index + 1 < mergedLessons.length) {
+                    const nextLesson = mergedLessons[index + 1];
+                    const nextLink = lessonList.querySelector(
+                      `a[href="lesson.html?lessonId=${nextLesson.id}"]`
+                    );
+                    if (nextLink) {
+                      nextLink.classList.remove("disabled");
+                      nextLink.style.pointerEvents = "auto";
+                      nextLink.style.color = "orange";
+                    }
+                  }
+                })
+                .catch((error) => {
+                  console.error("Error updating progress:", error);
+                });
+            });
+          } else {
+            // Disable links for all other lessons
+            link.classList.add("disabled");
+            link.style.pointerEvents = "none";
+            link.style.color = "lightgray";
+          }
+
+          listItem.appendChild(link);
+          lessonList.appendChild(listItem);
+        });
+      }
+
+      function updateProgress(courseId, lessonId, studentId, token) {
+        const mutation = `
+            mutation {
+                updateProgress(courseId: ${courseId}, lessonId: ${lessonId}, studentId: ${studentId}) {
+                    success
+                    message
+                }
+            }
+        `;
+
+        return fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query: mutation }), // Changed from 'mutation' to 'query'
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.errors) {
+              throw new Error(data.errors[0].message);
+            }
+            return data.data.updateProgress;
+          });
+      }
+
+      function calculateProgressPercentage(courseId, studentId, token) {
+        const query = `
+            query {
+                userPercentage(courseId: ${courseId}, studentId: ${studentId}) {
+                    progressPercentage
+                }
+            }
+        `;
+
+        fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            const progressPercentage =
+              data.data.userPercentage.progressPercentage;
+            updateProgressDisplay(progressPercentage);
+          })
+          .catch((error) => {
+            console.error("Error fetching progress percentage:", error);
+          });
+      }
+
+      function updateProgressDisplay(progressPercentage) {
+        const progressElement = document.getElementById("progress-percentage");
+        progressElement.textContent = `${progressPercentage}%`;
+        const certificateMessageElement = document.getElementById(
+          "certificate-message"
+        );
+
+        if (progressPercentage === 100) {
+          certificateMessageElement.style.display = "block";
+        } else {
+          certificateMessageElement.style.display = "none";
+        }
+      }
+    </script>
+  </body>
+</html>

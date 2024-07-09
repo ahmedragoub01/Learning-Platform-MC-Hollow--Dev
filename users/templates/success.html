@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Login Success</title>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+  </head>
+  <body>
+    <h1>Login Successful</h1>
+    <p>Welcome back, <span id="username"></span>!</p>
+    <h2>Your Courses</h2>
+    <ul id="courses-list"></ul>
+    <div id="lessons-container" style="display: none">
+      <h2>Lessons for <span id="course-title"></span></h2>
+      <ul id="lessons-list"></ul>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("authToken");
+
+      if (token) {
+        try {
+          const decodedToken = jwt_decode(token);
+          const username = decodedToken.username;
+
+          document.getElementById("username").innerText = username;
+
+          const query = `
+            query {
+              myCourses {
+                id
+                title
+                description
+              }
+            }
+          `
+            .replace(/\s+/g, " ")
+            .trim();
+
+          fetch("/graphql/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `JWT ${token}`,
+            },
+            body: JSON.stringify({ query }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              const coursesList = document.getElementById("courses-list");
+              if (data.errors) {
+                coursesList.innerHTML = `<li>Error fetching courses: ${data.errors[0].message}</li>`;
+              } else {
+                const courses = data.data.myCourses;
+                if (courses.length > 0) {
+                  courses.forEach((course) => {
+                    const listItem = document.createElement("li");
+                    listItem.innerHTML = `<a href="#" data-course-id="${course.id}">${course.title}</a>: ${course.description}`;
+                    listItem
+                      .querySelector("a")
+                      .addEventListener("click", (event) => {
+                        event.preventDefault();
+                        fetchLessons(course.id, course.title);
+                      });
+                    coursesList.appendChild(listItem);
+                  });
+                } else {
+                  coursesList.textContent =
+                    "You are not enrolled in any courses.";
+                }
+              }
+            })
+            .catch((error) => {
+              document.getElementById(
+                "courses-list"
+              ).innerHTML = `<li>Error fetching courses.</li>`;
+            });
+        } catch (error) {
+          document.getElementById(
+            "courses-list"
+          ).innerHTML = `<li>Error decoding token.</li>`;
+        }
+      } else {
+        document.getElementById(
+          "courses-list"
+        ).innerHTML = `<li>No token found in local storage.</li>`;
+      }
+
+      function fetchLessons(courseId, courseTitle) {
+        const query = `
+          query {
+            courseLessons(courseId: ${courseId}) {
+              title
+              content
+              order
+            }
+          }
+        `
+          .replace(/\s+/g, " ")
+          .trim();
+
+        fetch("/graphql/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${token}`,
+          },
+          body: JSON.stringify({ query }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            const lessonsContainer =
+              document.getElementById("lessons-container");
+            const lessonsList = document.getElementById("lessons-list");
+            document.getElementById("course-title").innerText = courseTitle;
+            lessonsList.innerHTML = "";
+
+            if (data.errors) {
+              lessonsList.innerHTML = `<li>Error fetching lessons: ${data.errors[0].message}</li>`;
+            } else {
+              const lessons = data.data.courseLessons;
+              if (lessons.length > 0) {
+                lessons.forEach((lesson) => {
+                  const listItem = document.createElement("li");
+                  listItem.textContent = `${lesson.order}. ${lesson.title}: ${lesson.content}`;
+                  lessonsList.appendChild(listItem);
+                });
+              } else {
+                lessonsList.textContent = "No lessons found for this course.";
+              }
+            }
+            lessonsContainer.style.display = "block";
+          })
+          .catch((error) => {
+            document.getElementById(
+              "lessons-list"
+            ).innerHTML = `<li>Error fetching lessons.</li>`;
+          });
+      }
+    </script>
+  </body>
+</html>
