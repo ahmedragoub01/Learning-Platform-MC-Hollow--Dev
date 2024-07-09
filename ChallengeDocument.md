@@ -3,7 +3,7 @@
 - Team Name: **Backend Rangers**
 - Challenge Name : **Challenge 8 (Hollow Knight)**
 
-- What is the percentage of the challenge you have completed? **100%**
+- What is the percentage of the challenge you have completed? **87,77%**
 
 - What are the requirements you have implemented?
 
